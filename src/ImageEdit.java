@@ -7,6 +7,8 @@ import  java.awt.image.*;
 import  javax.imageio.*;
 import  javax.swing.filechooser.FileFilter;
 
+enum Mouse{Dragged,Clicked}
+
 public class ImageEdit
 {
     // Режим рисования
@@ -24,7 +26,8 @@ public class ImageEdit
     JButton colorbutton;
     JColorChooser tcc;
     // поверхность рисования
-    BufferedImage imag;
+    ImageLog imag;
+    //BufferedImage imag;
     // если мы загружаем картинку
     boolean loading=false;
     String fileName;
@@ -40,6 +43,7 @@ public class ImageEdit
         menuBar.setBounds(0,0,350,30);
         JMenu fileMenu = new  JMenu("Файл");
         menuBar.add(fileMenu);
+
 
         Action loadAction = new  AbstractAction("Загрузить")
         {
@@ -57,7 +61,7 @@ public class ImageEdit
                         File iF= new  File(fileName);
                         jf.addChoosableFileFilter(new  TextFileFilter(".png"));
                         jf.addChoosableFileFilter(new  TextFileFilter(".jpg"));
-                        imag = ImageIO.read(iF);
+                        imag = (ImageLog) ImageIO.read(iF);
                         loading=true;
                         f.setSize(imag.getWidth()+40, imag.getWidth()+80);
                         japan.setSize(imag.getWidth(), imag.getWidth());
@@ -159,83 +163,62 @@ public class ImageEdit
         japan.setOpaque(true);
         f.add(japan);
 
+
         JToolBar toolbar = new  JToolBar("Toolbar", JToolBar.VERTICAL);
 
-        JButton penbutton = new  JButton(new  ImageIcon("pen.png"));
-        penbutton.addActionListener(new  ActionListener()
-        {
-            public void actionPerformed(ActionEvent event)
-            {
-                rezhim=0;
-            }
-        });
-        toolbar.add(penbutton);
-        JButton brushbutton = new  JButton(new  ImageIcon("brush.png"));
-        brushbutton.addActionListener(new  ActionListener()
-        {
-            public void actionPerformed(ActionEvent event)
-            {
-                rezhim=1;
-            }
-        });
-        toolbar.add(brushbutton);
+        String fileNames[] = {"pen.png","brush.png","lastic.png",
+                "text.png","line.png","elips.png","rect.png"};
+        int rezims[] = {0,1,2,3,4,5,6};
+        JButton toolBts[] = new JButton[fileNames.length];
 
-        JButton lasticbutton = new JButton(new  ImageIcon("lastic.png"));
-        lasticbutton.addActionListener(new  ActionListener()
-        {
-            public void actionPerformed(ActionEvent event)
+        for (int i = 0;i<fileNames.length;i++){
+            int rezimTmp = rezims[i];
+            toolBts[i] = new JButton(new  ImageIcon(fileNames[i]));
+            toolBts[i].addActionListener(new  ActionListener()
             {
-                rezhim=2;
-            }
-        });
-        toolbar.add(lasticbutton);
-
-        JButton textbutton = new  JButton(new  ImageIcon("text.png"));
-        textbutton.addActionListener(new  ActionListener()
-        {
-            public void actionPerformed(ActionEvent event)
-            {
-                rezhim=3;
-            }
-        });
-        toolbar.add(textbutton);
-
-        JButton linebutton = new  JButton(new  ImageIcon("line.png"));
-        linebutton.addActionListener(new  ActionListener()
-        {
-            public void actionPerformed(ActionEvent event)
-            {
-                rezhim=4;
-            }
-        });
-        toolbar.add(linebutton);
-
-        JButton elipsbutton = new  JButton(new  ImageIcon("elips.png"));
-        elipsbutton.addActionListener(new  ActionListener(){
-            public void actionPerformed(ActionEvent event)
-            {
-                rezhim=5;
-            }
-        });
-        toolbar.add(elipsbutton);
-
-        JButton rectbutton = new  JButton(new  ImageIcon("rect.png"));
-        rectbutton.addActionListener(new  ActionListener()
-        {
-            public void actionPerformed(ActionEvent event)
-            {
-                rezhim=6;
-            }
-        });
-        toolbar.add(rectbutton);
-
+                public void actionPerformed(ActionEvent event)
+                {
+                    rezhim=rezimTmp;
+                }
+            });
+            toolbar.add(toolBts[i]);
+        }
         toolbar.setBounds(0, 0, 30, 300);
         f.add(toolbar);
 
-        // Тулбар для кнопок
+        JToolBar undoBar = new  JToolBar("undoBar", JToolBar.HORIZONTAL);
+        undoBar.setBounds(30, 0, 90, 30);
+        JButton undoBts = new JButton(new  ImageIcon("undo.png"));
+        undoBts.setBounds(0, 5, 15, 15);
+        undoBts.addActionListener(new  ActionListener()
+        {
+            public void actionPerformed(ActionEvent event)
+            {
+                System.out.println("undo");
+                imag = ImageLog.undo(imag);
+
+                //japan.paintComponent(imag.img.getGraphics());
+                japan.repaint();
+            }
+        });
+        undoBar.add(undoBts);
+
+        JButton redoBts = new JButton(new  ImageIcon("redo.png"));
+        redoBts.setBounds(0, 5, 15, 15);
+        redoBts.addActionListener(new  ActionListener()
+        {
+            public void actionPerformed(ActionEvent event)
+            {
+                System.out.println("redo");
+            }
+        });
+        undoBar.add(redoBts);
+        f.add(undoBar);
+
+        // Тулбар для кнопок цвета
         JToolBar colorbar = new  JToolBar("Colorbar", JToolBar.HORIZONTAL);
-        colorbar.setBounds(30, 0, 260, 30);
-        colorbutton = new  JButton();
+        colorbar.setBounds(110, 0, 360, 30);
+        colorbutton = new JButton();
         colorbutton.setBackground(maincolor);
         colorbutton.setBounds(15, 5, 20, 20);
         colorbutton.addActionListener(new  ActionListener()
@@ -248,124 +231,32 @@ public class ImageEdit
         });
         colorbar.add(colorbutton);
 
-        JButton redbutton = new  JButton();
-        redbutton.setBackground(Color.red);
-        redbutton.setBounds(40, 5, 15, 15);
-        redbutton.addActionListener(new  ActionListener()
-        {
-            public void actionPerformed(ActionEvent event)
-            {
-                maincolor = Color.red;
-                colorbutton.setBackground(maincolor);
-            }
-        });
-        colorbar.add(redbutton);
+        Color[] colors = {Color.red,Color.orange,Color.yellow,
+                            Color.green,Color.blue,Color.cyan,
+                            Color.magenta,Color.white,Color.black};
 
-        JButton orangebutton = new  JButton();
-        orangebutton.setBackground(Color.orange);
-        orangebutton.setBounds(60, 5, 15, 15);
-        orangebutton.addActionListener(new  ActionListener()
-        {
-            public void actionPerformed(ActionEvent event)
+        JButton colorBt[] = new JButton[colors.length];
+        for (int i = 0;i<colors.length;i++){
+            var curColor = colors[i];
+            colorBt[i] = new JButton();
+            colorBt[i].setBackground(colors[i]);
+            colorBt[i].setBounds(40+20*i, 5, 15, 15);
+            colorBt[i].addActionListener(new  ActionListener()
             {
-                maincolor = Color.orange;
-                colorbutton.setBackground(maincolor);
-            }
-        });
-        colorbar.add(orangebutton);
+                public void actionPerformed(ActionEvent event)
+                {
+                    maincolor = curColor;
+                    colorbutton.setBackground(maincolor);
+                }
+            });
+            colorbar.add(colorBt[i]);
+        }
 
-        JButton yellowbutton = new  JButton();
-        yellowbutton.setBackground(Color.yellow);
-        yellowbutton.setBounds(80, 5, 15, 15);
-        yellowbutton.addActionListener(new  ActionListener()
-        {
-            public void actionPerformed(ActionEvent event)
-            {
-                maincolor = Color.yellow;
-                colorbutton.setBackground(maincolor);
-            }
-        });
-        colorbar.add(yellowbutton);
-
-        JButton greenbutton = new  JButton();
-        greenbutton.setBackground(Color.green);
-        greenbutton.setBounds(100, 5, 15, 15);
-        greenbutton.addActionListener(new  ActionListener()
-        {
-            public void actionPerformed(ActionEvent event)
-            {
-                maincolor = Color.green;
-                colorbutton.setBackground(maincolor);
-            }
-        });
-        colorbar.add(greenbutton);
-
-        JButton bluebutton = new JButton();
-        bluebutton.setBackground(Color.blue);
-        bluebutton.setBounds(120, 5, 15, 15);
-        bluebutton.addActionListener(new  ActionListener()
-        {
-            public void actionPerformed(ActionEvent event)
-            {
-                maincolor = Color.blue;
-                colorbutton.setBackground(maincolor);
-            }
-        });
-        colorbar.add(bluebutton);
-
-        JButton cyanbutton = new  JButton();
-        cyanbutton.setBackground(Color.cyan);
-        cyanbutton.setBounds(140, 5, 15, 15);
-        cyanbutton.addActionListener(new  ActionListener()
-        {
-            public void actionPerformed(ActionEvent event)
-            {
-                maincolor = Color.cyan;
-                colorbutton.setBackground(maincolor);
-            }
-        });
-        colorbar.add(cyanbutton);
-
-        JButton magentabutton = new  JButton();
-        magentabutton.setBackground(Color.magenta);
-        magentabutton.setBounds(160, 5, 15, 15);
-        magentabutton.addActionListener(new  ActionListener()
-        {
-            public void actionPerformed(ActionEvent event)
-            {
-                maincolor = Color.magenta;
-                colorbutton.setBackground(maincolor);
-            }
-        });
-        colorbar.add(magentabutton);
-
-        JButton whitebutton = new  JButton();
-        whitebutton.setBackground(Color.white);
-        whitebutton.setBounds(180, 5, 15, 15);
-        whitebutton.addActionListener(new  ActionListener()
-        {
-            public void actionPerformed(ActionEvent event)
-            {
-                maincolor = Color.white;
-                colorbutton.setBackground(maincolor);
-            }
-        });
-        colorbar.add(whitebutton);
-
-        JButton blackbutton = new  JButton();
-        blackbutton.setBackground(Color.black);
-        blackbutton.setBounds(200, 5, 15, 15);
-        blackbutton.addActionListener(new  ActionListener()
-        {
-            public void actionPerformed(ActionEvent event)
-            {
-                maincolor = Color.black;
-                colorbutton.setBackground(maincolor);
-            }
-        });
-        colorbar.add(blackbutton);
         colorbar.setLayout(null);
         f.add(colorbar);
+
+
+enum Mouse{Dragged,Clicked}
 
         tcc = new  JColorChooser(maincolor);
         tcc.getSelectionModel().addChangeListener(new  ChangeListener()
@@ -380,10 +271,12 @@ public class ImageEdit
         {
             public void mouseDragged(MouseEvent e)
             {
+
                 if (pressed==true)
                 {
-                    Graphics g = imag.getGraphics();
-                    Graphics2D g2 = (Graphics2D)g;
+                    //Graphics g = imag.get().getGraphics();
+                    Graphics2D g2 = imag.get2DGraphics(false);
+                    //Graphics2D g2 = (Graphics2D)g;
                     // установка цвета
                     g2.setColor(maincolor);
                     switch (rezhim)
@@ -414,8 +307,8 @@ public class ImageEdit
         {
             public void mouseClicked(MouseEvent e) {
 
-                Graphics g = imag.getGraphics();
-                Graphics2D g2 = (Graphics2D)g;
+                Graphics2D g2 = imag.get2DGraphics(false);
+                //Graphics2D g2 = (Graphics2D)g;
                 // установка цвета
                 g2.setColor(maincolor);
                 switch (rezhim)
@@ -457,8 +350,9 @@ public class ImageEdit
             }
             public void mouseReleased(MouseEvent e) {
 
-                Graphics g = imag.getGraphics();
-                Graphics2D g2 = (Graphics2D)g;
+                //Graphics g = imag.get().getGraphics();
+                Graphics2D g2 = imag.get2DGraphics(true);
+                //Graphics2D g2 = (Graphics2D)g;
                 // установка цвета
                 g2.setColor(maincolor);
                 // Общие рассчеты для овала и прямоугольника
@@ -475,15 +369,15 @@ public class ImageEdit
                 {
                     // линия
                     case 4:
-                        g.drawLine(xf, yf, e.getX(), e.getY());
+                        g2.drawLine(xf, yf, e.getX(), e.getY());
                         break;
                     // круг
                     case 5:
-                        g.drawOval(x1, y1, (x2-x1), (y2-y1));
+                        g2.drawOval(x1, y1, (x2-x1), (y2-y1));
                         break;
                     // прямоугольник
                     case 6:
-                        g.drawRect(x1, y1, (x2-x1), (y2-y1));
+                        g2.drawRect(x1, y1, (x2-x1), (y2-y1));
                         break;
                 }
                 xf=0; yf=0;
@@ -502,8 +396,9 @@ public class ImageEdit
             public void keyTyped(KeyEvent e)
             {
                 if(rezhim==3){
-                    Graphics g = imag.getGraphics();
-                    Graphics2D g2 = (Graphics2D)g;
+                    //Graphics g = imag.get().getGraphics();
+                    //Graphics2D g2 = (Graphics2D)g;
+                    Graphics2D g2 = imag.get2DGraphics(true);
                     // установка цвета
                     g2.setColor(maincolor);
                     g2.setStroke(new  BasicStroke(2.0f));
@@ -527,12 +422,13 @@ public class ImageEdit
                 if(loading==false)
                 {
                     japan.setSize(f.getWidth()-40, f.getHeight()-80);
-                    BufferedImage tempImage = new  BufferedImage(japan.getWidth(), japan.getHeight(), BufferedImage.TYPE_INT_RGB);
+                    BufferedImage tempImage = new  ImageLog(japan.getWidth(), japan.getHeight(), BufferedImage.TYPE_INT_RGB);
                     Graphics2D d2 = (Graphics2D) tempImage.createGraphics();
                     d2.setColor(Color.white);
                     d2.fillRect(0, 0, japan.getWidth(), japan.getHeight());
-                    tempImage.setData(imag.getRaster());
-                    imag=tempImage;
+                    if(imag!=null)
+                        tempImage.setData(imag.getRaster());
+                    imag= (ImageLog) tempImage;
                     japan.repaint();
                 }
                 loading=false;
@@ -581,7 +477,7 @@ public class ImageEdit
         {
             if(imag==null)
             {
-                imag = new  BufferedImage(this.getWidth(), this.getHeight(), BufferedImage.TYPE_INT_RGB);
+                imag = new  ImageLog(this.getWidth(), this.getHeight(), BufferedImage.TYPE_INT_RGB);
                 Graphics2D d2 = (Graphics2D) imag.createGraphics();
                 d2.setColor(Color.white);
                 d2.fillRect(0, 0, this.getWidth(), this.getHeight());
