@@ -58,7 +58,11 @@ public class ImageEdit
                         File iF= new  File(fileName);
                         jf.addChoosableFileFilter(new  TextFileFilter(".png"));
                         jf.addChoosableFileFilter(new  TextFileFilter(".jpg"));
-                        img = (ImageLog) ImageIO.read(iF);
+
+                        img.saveChange(true);
+                        img = new ImageLog(ImageIO.read(iF));
+                        img.saveChange(true);
+
                         loading=true;
                         window.setSize(img.getWidth()+40, img.getWidth()+80);
                         paintPanel.setSize(img.getWidth(), img.getWidth());

@@ -21,10 +21,13 @@ public class ImageLog extends BufferedImage {
         );
     }
 
-    public Graphics2D get2DGraphics(boolean saveChange){
+    public void saveChange(boolean saveChange){
         if(saveChange||imagLog.size()==0){
             imagLog.push((new ImageLog(this)));//deepCopy(this.imagLog.peek())
         }
+    }
+    public Graphics2D get2DGraphics(boolean saveChange){
+        saveChange(saveChange);
         return (Graphics2D)this.getGraphics();
     }
     public boolean canUndo(){
