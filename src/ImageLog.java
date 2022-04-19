@@ -12,8 +12,6 @@ public class ImageLog extends BufferedImage {
 
     public ImageLog(int width, int height, int imageType) {
         super(width, height, imageType);
-        //img=this;
-        //this.imagLog.push(deepCopy(this));
     }
     public ImageLog(BufferedImage img) {
         super(img.getColorModel(),
@@ -21,31 +19,20 @@ public class ImageLog extends BufferedImage {
                 img.getColorModel().isAlphaPremultiplied(),
                 null
         );
-        //this.img=this;
     }
 
-    public void add(BufferedImage imag){
-        this.imagLog.push(new ImageLog(imag));
-    }
-    public Graphics2D get2DGraphics(boolean SaveChange){
-        if(SaveChange||imagLog.size()==0){
-            this.imagLog.push((new ImageLog(this)));//deepCopy(this.imagLog.peek())
-            new ImageLog(this.imagLog.peek());
+    public Graphics2D get2DGraphics(boolean saveChange){
+        if(saveChange||imagLog.size()==0){
+            imagLog.push((new ImageLog(this)));//deepCopy(this.imagLog.peek())
         }
-        //var tmp =  ((BufferedImage)this.imagLog.pop());
         return (Graphics2D)this.getGraphics();
     }
-    public BufferedImage deepCopy(BufferedImage bi) {
-        ColorModel cm = bi.getColorModel();
-        boolean isAlphaPremultiplied = cm.isAlphaPremultiplied();
-        WritableRaster raster = bi.copyData(bi.getRaster().createCompatibleWritableRaster());
-        return new BufferedImage(cm, raster, isAlphaPremultiplied, null);
+    public boolean canUndo(){
+        return imagLog.size()>1;
     }
-    static ImageLog undo(ImageLog img){
-        if(imagLog.size()>1){
-            imagLog.pop();
-            img = (ImageLog) imagLog.peek();
-        }
-        return img;
+
+    public ImageLog getLastImg(){// для undo требуется заменить this в другом методе на возвращаемый обьект
+        imagLog.pop();
+        return new ImageLog(imagLog.peek());
     }
 }

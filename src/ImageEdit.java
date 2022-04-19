@@ -5,44 +5,41 @@ import  javax.swing.*;
 import  javax.swing.event.*;
 import  java.awt.image.*;
 import  javax.imageio.*;
-import  javax.swing.filechooser.FileFilter;
 
 enum Mouse{Dragged,Clicked}
+enum DrawingMode {pen, brush, eraser, text, line, circle, rectangle}
 
 public class ImageEdit
 {
     // Режим рисования
-    int  rezhim=0;
-    int  xPad;
-    int  xf;
-    int  yf;
-    int  yPad;
-    int  thickness;
-    boolean pressed=false;
-    // текущий цвет
-    Color maincolor;
-    MyFrame f;
-    MyPanel japan;
+    //int  rezhim=0;
+    DrawingMode drawingMode = DrawingMode.pen;
+    DrawHelper drawHelper = new DrawHelper();
+
+    MainWindow window;
+    PaintPanel paintPanel;
     JButton colorbutton;
-    JColorChooser tcc;
+    JColorChooser colorChooser;
     // поверхность рисования
-    ImageLog imag;
+    ImageLog img;
     //BufferedImage imag;
     // если мы загружаем картинку
     boolean loading=false;
     String fileName;
     public ImageEdit()
     {
-        f=new MyFrame("Графический редактор");
-        f.setSize(350,350);
-        f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        maincolor=Color.black;
+        window =new MainWindow("Графический редактор");
+        window.setSize(350,350);
+        window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        drawHelper.currentColor =Color.black;
 
         JMenuBar menuBar = new  JMenuBar();
-        f.setJMenuBar(menuBar);
+        window.setJMenuBar(menuBar);
         menuBar.setBounds(0,0,350,30);
         JMenu fileMenu = new  JMenu("Файл");
         menuBar.add(fileMenu);
+
+        drawHelper.setImageEdit(this);
 
 
         Action loadAction = new  AbstractAction("Загрузить")
@@ -61,16 +58,16 @@ public class ImageEdit
                         File iF= new  File(fileName);
                         jf.addChoosableFileFilter(new  TextFileFilter(".png"));
                         jf.addChoosableFileFilter(new  TextFileFilter(".jpg"));
-                        imag = (ImageLog) ImageIO.read(iF);
+                        img = (ImageLog) ImageIO.read(iF);
                         loading=true;
-                        f.setSize(imag.getWidth()+40, imag.getWidth()+80);
-                        japan.setSize(imag.getWidth(), imag.getWidth());
-                        japan.repaint();
+                        window.setSize(img.getWidth()+40, img.getWidth()+80);
+                        paintPanel.setSize(img.getWidth(), img.getWidth());
+                        paintPanel.repaint();
                     } catch (FileNotFoundException ex) {
-                        JOptionPane.showMessageDialog(f, "Такого файла не существует");
+                        JOptionPane.showMessageDialog(window, "Такого файла не существует");
                     }
                     catch (IOException ex) {
-                        JOptionPane.showMessageDialog(f, "Исключение ввода-вывода");
+                        JOptionPane.showMessageDialog(window, "Исключение ввода-вывода");
                     }
                     catch (Exception ex) {
                     }
@@ -104,16 +101,16 @@ public class ImageEdit
                     // Смотрим какой фильтр выбран
                     if(jf.getFileFilter()==pngFilter)
                     {
-                        ImageIO.write(imag, "png", new  File(fileName+".png"));
+                        ImageIO.write(img, "png", new  File(fileName+".png"));
                     }
                     else
                     {
-                        ImageIO.write(imag, "jpeg", new  File(fileName+".jpg"));
+                        ImageIO.write(img, "jpeg", new  File(fileName+".jpg"));
                     }
                 }
                 catch(IOException ex)
                 {
-                    JOptionPane.showMessageDialog(f, "Ошибка ввода-вывода");
+                    JOptionPane.showMessageDialog(window, "Ошибка ввода-вывода");
                 }
             }
         };
@@ -141,27 +138,27 @@ public class ImageEdit
                     // Смотрим какой фильтр выбран
                     if(jf.getFileFilter()==pngFilter)
                     {
-                        ImageIO.write(imag, "png", new  File(fileName+".png"));
+                        ImageIO.write(img, "png", new  File(fileName+".png"));
                     }
                     else
                     {
-                        ImageIO.write(imag, "jpeg", new  File(fileName+".jpg"));
+                        ImageIO.write(img, "jpeg", new  File(fileName+".jpg"));
                     }
                 }
                 catch(IOException ex)
                 {
-                    JOptionPane.showMessageDialog(f, "Ошибка ввода-вывода");
+                    JOptionPane.showMessageDialog(window, "Ошибка ввода-вывода");
                 }
             }
         };
         JMenuItem saveasMenu = new  JMenuItem(saveasAction);
         fileMenu.add(saveasMenu);
 
-        japan = new  MyPanel();
-        japan.setBounds(30,30,260,260);
-        japan.setBackground(Color.white);
-        japan.setOpaque(true);
-        f.add(japan);
+        paintPanel = new PaintPanel();
+        paintPanel.setBounds(30,30,260,260);
+        paintPanel.setBackground(Color.white);
+        paintPanel.setOpaque(true);
+        window.add(paintPanel);
 
 
         JToolBar toolbar = new  JToolBar("Toolbar", JToolBar.VERTICAL);
@@ -172,19 +169,21 @@ public class ImageEdit
         JButton toolBts[] = new JButton[fileNames.length];
 
         for (int i = 0;i<fileNames.length;i++){
-            int rezimTmp = rezims[i];
+            //int rezimTmp = rezims[i];
+            DrawingMode dm = DrawingMode.values()[i];
             toolBts[i] = new JButton(new  ImageIcon(fileNames[i]));
             toolBts[i].addActionListener(new  ActionListener()
             {
                 public void actionPerformed(ActionEvent event)
                 {
-                    rezhim=rezimTmp;
+                    //rezhim=rezimTmp;
+                    drawingMode = dm;
                 }
             });
             toolbar.add(toolBts[i]);
         }
         toolbar.setBounds(0, 0, 30, 300);
-        f.add(toolbar);
+        window.add(toolbar);
 
         JToolBar undoBar = new  JToolBar("undoBar", JToolBar.HORIZONTAL);
         undoBar.setBounds(30, 0, 90, 30);
@@ -195,10 +194,10 @@ public class ImageEdit
             public void actionPerformed(ActionEvent event)
             {
                 System.out.println("undo");
-                imag = ImageLog.undo(imag);
+                drawHelper.undo();
 
                 //japan.paintComponent(imag.img.getGraphics());
-                japan.repaint();
+                paintPanel.repaint();
             }
         });
         undoBar.add(undoBts);
@@ -213,19 +212,19 @@ public class ImageEdit
             }
         });
         undoBar.add(redoBts);
-        f.add(undoBar);
+        window.add(undoBar);
 
         // Тулбар для кнопок цвета
         JToolBar colorbar = new  JToolBar("Colorbar", JToolBar.HORIZONTAL);
         colorbar.setBounds(110, 0, 360, 30);
         colorbutton = new JButton();
-        colorbutton.setBackground(maincolor);
+        colorbutton.setBackground(drawHelper.currentColor);
         colorbutton.setBounds(15, 5, 20, 20);
         colorbutton.addActionListener(new  ActionListener()
         {
             public void actionPerformed(ActionEvent event)
             {
-                ColorDialog coldi = new  ColorDialog(f,"Выбор цвета");
+                ColorDialog coldi = new  ColorDialog(window,"Выбор цвета");
                 coldi.setVisible(true);
             }
         });
@@ -245,197 +244,120 @@ public class ImageEdit
             {
                 public void actionPerformed(ActionEvent event)
                 {
-                    maincolor = curColor;
-                    colorbutton.setBackground(maincolor);
+                    drawHelper.currentColor = curColor;
+                    colorbutton.setBackground(drawHelper.currentColor);
                 }
             });
             colorbar.add(colorBt[i]);
         }
 
         colorbar.setLayout(null);
-        f.add(colorbar);
+        window.add(colorbar);
 
 
-enum Mouse{Dragged,Clicked}
-
-        tcc = new  JColorChooser(maincolor);
-        tcc.getSelectionModel().addChangeListener(new  ChangeListener()
+        colorChooser = new  JColorChooser(drawHelper.currentColor);
+        colorChooser.getSelectionModel().addChangeListener(new  ChangeListener()
         {
             public void stateChanged(ChangeEvent e)
             {
-                maincolor = tcc.getColor();
-                colorbutton.setBackground(maincolor);
+                drawHelper.currentColor = colorChooser.getColor();
+                colorbutton.setBackground(drawHelper.currentColor);
             }
         });
-        japan.addMouseMotionListener(new  MouseMotionAdapter()
+        paintPanel.addMouseMotionListener(new  MouseMotionAdapter()
         {
             public void mouseDragged(MouseEvent e)
             {
-
-                if (pressed==true)
-                {
-                    //Graphics g = imag.get().getGraphics();
-                    Graphics2D g2 = imag.get2DGraphics(false);
-                    //Graphics2D g2 = (Graphics2D)g;
-                    // установка цвета
-                    g2.setColor(maincolor);
-                    switch (rezhim)
-                    {
-                        // карандаш
-                        case 0:
-                            g2.drawLine(xPad, yPad, e.getX(), e.getY());
-                            break;
-                        // кисть
-                        case 1:
-                            g2.setStroke(new  BasicStroke(3.0f));
-                            g2.drawLine(xPad, yPad, e.getX(), e.getY());
-                            break;
-                        // ластик
-                        case 2:
-                            g2.setStroke(new  BasicStroke(3.0f));
-                            g2.setColor(Color.WHITE);
-                            g2.drawLine(xPad, yPad, e.getX(), e.getY());
-                            break;
-                    }
-                    xPad=e.getX();
-                    yPad=e.getY();
+                drawHelper.setMouseEvent(e);
+                switch (drawingMode) {
+                    case pen:       drawHelper.drawWith_pen(false); break;
+                    case brush:     drawHelper.drawWith_brush(false);break;
+                    case eraser:    drawHelper.drawWith_eraser(false);break;
+                    case line:          drawHelper.undo(); drawHelper.drawWith_line(true);break;
+                    case circle:        drawHelper.undo(); drawHelper.drawWith_circle(true);break;
+                    case rectangle:     drawHelper.undo(); drawHelper.drawWith_rectangle(true);break;
                 }
-                japan.repaint();
+                drawHelper.setDraggedXY();
+                paintPanel.repaint();
             }
         });
-        japan.addMouseListener(new  MouseAdapter()
+        paintPanel.addMouseListener(new  MouseAdapter()
         {
+            //нажал-отпустил
             public void mouseClicked(MouseEvent e) {
+                drawHelper.setMouseEvent(e);//TODO проверить нужно ли каждый раз передавать мышь
 
-                Graphics2D g2 = imag.get2DGraphics(false);
-                //Graphics2D g2 = (Graphics2D)g;
-                // установка цвета
-                g2.setColor(maincolor);
-                switch (rezhim)
-                {
-                    // карандаш
-                    case 0:
-                        g2.drawLine(xPad, yPad, xPad+1, yPad+1);
-                        break;
-                    // кисть
-                    case 1:
-                        g2.setStroke(new  BasicStroke(3.0f));
-                        g2.drawLine(xPad, yPad, xPad+1, yPad+1);
-                        break;
-                    // ластик
-                    case 2:
-                        g2.setStroke(new  BasicStroke(3.0f));
-                        g2.setColor(Color.WHITE);
-                        g2.drawLine(xPad, yPad, xPad+1, yPad+1);
-                        break;
-                    // текст
-                    case 3:
-                        // устанавливаем фокус для панели,
-                        // чтобы печатать на ней текст
-                        japan.requestFocus();
-                        break;
-                }
-                xPad=e.getX();
-                yPad=e.getY();
+                switch (drawingMode) {
+                    case pen:       drawHelper.drawWith_pen(true); break;
+                    case brush:     drawHelper.drawWith_brush(true);break;
+                    case eraser:    drawHelper.drawWith_eraser(true);break;
+                    case text: paintPanel.requestFocus(); break;
+                    }
 
-                pressed=true;
-                japan.repaint();
+                drawHelper.setDraggedXY();
+                paintPanel.repaint();
             }
             public void mousePressed(MouseEvent e) {
-                xPad=e.getX();
-                yPad=e.getY();
-                xf=e.getX();
-                yf=e.getY();
-                pressed=true;
+                drawHelper.setMouseEvent(e);
+                drawHelper.setPressedXY();
+                drawHelper.setDraggedXY();
+                drawHelper.drawWith_pen(true);
             }
             public void mouseReleased(MouseEvent e) {
 
-                //Graphics g = imag.get().getGraphics();
-                Graphics2D g2 = imag.get2DGraphics(true);
-                //Graphics2D g2 = (Graphics2D)g;
-                // установка цвета
-                g2.setColor(maincolor);
-                // Общие рассчеты для овала и прямоугольника
-                int  x1=xf, x2=xPad, y1=yf, y2=yPad;
-                if(xf>xPad)
-                {
-                    x2=xf; x1=xPad;
+                drawHelper.setMouseEvent(e);
+                switch(drawingMode) {
+                    case pen:       drawHelper.drawWith_pen(true); break;
+                    case brush:     drawHelper.drawWith_brush(true);break;
+                    case eraser:    drawHelper.drawWith_eraser(true);break;
+                    case line:      drawHelper.drawWith_line(true);break;
+                    case circle:    drawHelper.drawWith_circle(true);break;
+                    case rectangle: drawHelper.drawWith_rectangle(true);break;
                 }
-                if(yf>yPad)
-                {
-                    y2=yf; y1=yPad;
-                }
-                switch(rezhim)
-                {
-                    // линия
-                    case 4:
-                        g2.drawLine(xf, yf, e.getX(), e.getY());
-                        break;
-                    // круг
-                    case 5:
-                        g2.drawOval(x1, y1, (x2-x1), (y2-y1));
-                        break;
-                    // прямоугольник
-                    case 6:
-                        g2.drawRect(x1, y1, (x2-x1), (y2-y1));
-                        break;
-                }
-                xf=0; yf=0;
-                pressed=false;
-                japan.repaint();
+                drawHelper.setPressedXY(0,0);
+                paintPanel.repaint();
             }
         });
-        japan.addKeyListener(new  KeyAdapter()
+        paintPanel.addKeyListener(new  KeyAdapter()
         {
             public void keyReleased(KeyEvent e)
             {
-                // устанавливаем фокус для панели,
-                // чтобы печатать на ней текст
-                japan.requestFocus();
+                // устанавливаем фокус для панели,чтобы печатать на ней текст
+                paintPanel.requestFocus();
             }
             public void keyTyped(KeyEvent e)
             {
-                if(rezhim==3){
-                    //Graphics g = imag.get().getGraphics();
-                    //Graphics2D g2 = (Graphics2D)g;
-                    Graphics2D g2 = imag.get2DGraphics(true);
-                    // установка цвета
-                    g2.setColor(maincolor);
-                    g2.setStroke(new  BasicStroke(2.0f));
+                if(drawingMode==DrawingMode.text){
+                    drawHelper.setKeyEvent(e);
 
-                    String str = new  String("");
-                    str+=e.getKeyChar();
-                    g2.setFont(new  Font("Arial", 0, 15));
-                    g2.drawString(str, xPad, yPad);
-                    xPad+=10;
-                    // устанавливаем фокус для панели,
-                    // чтобы печатать на ней текст
-                    japan.requestFocus();
-                    japan.repaint();
+                    drawHelper.drawWith_text(true);
+
+                    paintPanel.requestFocus();
+                    paintPanel.repaint();
                 }
             }
         });
-        f.addComponentListener(new  ComponentAdapter() {
+        window.addComponentListener(new  ComponentAdapter() {
             public void componentResized(java.awt.event.ComponentEvent evt) {
                 // если делаем загрузку, то изменение размеров формы
                 // отрабатываем в коде загрузки
                 if(loading==false)
                 {
-                    japan.setSize(f.getWidth()-40, f.getHeight()-80);
-                    BufferedImage tempImage = new  ImageLog(japan.getWidth(), japan.getHeight(), BufferedImage.TYPE_INT_RGB);
+                    paintPanel.setSize(window.getWidth()-40, window.getHeight()-80);
+                    BufferedImage tempImage = new  ImageLog(paintPanel.getWidth(), paintPanel.getHeight(), BufferedImage.TYPE_INT_RGB);
                     Graphics2D d2 = (Graphics2D) tempImage.createGraphics();
                     d2.setColor(Color.white);
-                    d2.fillRect(0, 0, japan.getWidth(), japan.getHeight());
-                    if(imag!=null)
-                        tempImage.setData(imag.getRaster());
-                    imag= (ImageLog) tempImage;
-                    japan.repaint();
+                    d2.fillRect(0, 0, paintPanel.getWidth(), paintPanel.getHeight());
+                    if(img !=null)
+                        tempImage.setData(img.getRaster());
+                    img = (ImageLog) tempImage;
+                    paintPanel.repaint();
                 }
                 loading=false;
             }
         });
-        f.setLayout(null);
-        f.setVisible(true);
+        window.setLayout(null);
+        window.setVisible(true);
     }
 
     public static void main(String[] args) {
@@ -452,56 +374,36 @@ enum Mouse{Dragged,Clicked}
         public ColorDialog(JFrame owner, String title)
         {
             super(owner, title, true);
-            add(tcc);
+            add(colorChooser);
             setSize(200, 200);
         }
     }
 
-    class MyFrame extends JFrame
+    class MainWindow extends JFrame
     {
         public void paint(Graphics g)
         {
             super.paint(g);
         }
-        public MyFrame(String title)
+        public MainWindow(String title)
         {
             super(title);
         }
     }
 
-    class MyPanel extends JPanel
+    class PaintPanel extends JPanel
     {
-        public MyPanel()
-        { }
         public void paintComponent (Graphics g)
         {
-            if(imag==null)
+            if(img ==null)
             {
-                imag = new  ImageLog(this.getWidth(), this.getHeight(), BufferedImage.TYPE_INT_RGB);
-                Graphics2D d2 = (Graphics2D) imag.createGraphics();
+                img = new  ImageLog(this.getWidth(), this.getHeight(), BufferedImage.TYPE_INT_RGB);
+                Graphics2D d2 = (Graphics2D) img.createGraphics();
                 d2.setColor(Color.white);
                 d2.fillRect(0, 0, this.getWidth(), this.getHeight());
             }
             super.paintComponent(g);
-            g.drawImage(imag, 0, 0,this);
-        }
-    }
-    // Фильтр картинок
-    class TextFileFilter extends FileFilter
-    {
-        private String ext;
-        public TextFileFilter(String ext)
-        {
-            this.ext=ext;
-        }
-        public boolean accept(java.io.File file)
-        {
-            if (file.isDirectory()) return true;
-            return (file.getName().endsWith(ext));
-        }
-        public String getDescription()
-        {
-            return "*"+ext;
+            g.drawImage(img, 0, 0,this);
         }
     }
 }
